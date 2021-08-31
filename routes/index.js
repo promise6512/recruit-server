@@ -26,6 +26,7 @@ router.post('/register', (req, res) => {
 	    })
     }else{
       new UserModel({username,password:md5(password),type}).save((err,user)=>{
+       // console.log(user)
         const {_id,username,type} = user;
         const data = {_id,username,type};
         //设置持久化cookie
@@ -47,6 +48,7 @@ router.post('/register', (req, res) => {
 router.post('/login',(req,res)=>{
   const {username,password} = req.body;
   UserModel.findOne({username,password:md5(password)},userFilter,(err,user)=>{
+    //console.log(user)
     if(user){
       res.cookie('userId',user._id,{maxAge:1000*60*60*24*7});
       res.send({
