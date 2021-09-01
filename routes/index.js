@@ -7,6 +7,7 @@ router.get('/', function (req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
+//用于过滤返回的user对象的password和__v属性
 const userFilter = {
   password:0,
   __v:0
@@ -60,6 +61,59 @@ router.post('/login',(req,res)=>{
 	      "code": 1,
 	      "msg": "用户名或密码错误"
 	    })
+    }
+  })
+})
+
+//更新用户信息的路由
+router.post('/update',(req,res)=>{
+  //从请求的cookie中得到userid
+  const {userId} = req.cookies;
+  const userInfo = req.body;
+  //如果不存在cookie不存在
+  if(!userId){
+    res.send({code:1,msg:"请先登录"});
+    return;
+  }
+  UserModel.findByIdAndUpdate(userId,userInfo,(err,oldUser)=>{
+    if(!err){
+      if(!oldUser){
+        //如果没有找到user(可能cookie被篡改),通知浏览器删除cookie
+        res.clearCookie("userId")
+      }else{
+        const {_id,username,type} = oldUser;
+        //修改成功则返回返回新的user
+        res.send({
+          code:0,
+          data:{_id,username,type,...userInfo}
+        })
+      }
+    }
+  })
+})
+
+//自动登录的路由
+router.get("/autoLogin",(req,res)=>{
+  const {userId} = req.cookies;
+  UserModel.findOne({_id:userId},userFilter,(err,user)=>{
+    if(!err){
+      res.send({
+        code:0,
+        data:user
+      })
+    }
+  })
+})
+
+//获取用户列表
+router.get("/userList",(req,res)=>{
+  const {type} = req.query;
+  UserModel.find({type},(err,users)=>{
+    if(!err){
+      res.send({
+        code:0,
+        data:users
+      })
     }
   })
 })
