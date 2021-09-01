@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const md5 = require("blueimp-md5");
-const {UserModel} = require('../db/models')
+const { UserModel, ChatModel } = require('../db/models')
 /* GET home page. */
 router.get('/', function (req, res, next) {
   res.render('index', { title: 'Express' });
@@ -9,29 +9,29 @@ router.get('/', function (req, res, next) {
 
 //用于过滤返回的user对象的password和__v属性
 const userFilter = {
-  password:0,
-  __v:0
+  password: 0,
+  __v: 0
 }
 
 //注册 注册路由
 router.post('/register', (req, res) => {
   //1.获取请求参数
-  const {username,password,type} = req.body;
+  const { username, password, type } = req.body;
   //2.处理
-  UserModel.findOne({username},(err,user)=>{
+  UserModel.findOne({ username }, (err, user) => {
     //3.返回相应数据
-    if(user){
+    if (user) {
       res.send({
-	      code: 1,
-	      msg: "此用户已存在"
-	    })
-    }else{
-      new UserModel({username,password:md5(password),type}).save((err,user)=>{
-       // console.log(user)
-        const {_id,username,type} = user;
-        const data = {_id,username,type};
+        code: 1,
+        msg: "此用户已存在"
+      })
+    } else {
+      new UserModel({ username, password: md5(password), type }).save((err, user) => {
+        // console.log(user)
+        const { _id, username, type } = user;
+        const data = { _id, username, type };
         //设置持久化cookie
-        res.cookie('userId',_id,{maxAge:1000*60*60*24*7})
+        res.cookie('userId', _id, { maxAge: 1000 * 60 * 60 * 24 * 7 })
         //返回成功的响应数据
         res.send({
           code: 0,
@@ -42,50 +42,50 @@ router.post('/register', (req, res) => {
     }
   })
 
-  
+
 })
 
 //注册 登录路由
-router.post('/login',(req,res)=>{
-  const {username,password} = req.body;
-  UserModel.findOne({username,password:md5(password)},userFilter,(err,user)=>{
+router.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  UserModel.findOne({ username, password: md5(password) }, userFilter, (err, user) => {
     //console.log(user)
-    if(user){
-      res.cookie('userId',user._id,{maxAge:1000*60*60*24*7});
+    if (user) {
+      res.cookie('userId', user._id, { maxAge: 1000 * 60 * 60 * 24 * 7 });
       res.send({
         code: 0,
         data: user
       })
-    }else{
+    } else {
       res.send({
-	      "code": 1,
-	      "msg": "用户名或密码错误"
-	    })
+        "code": 1,
+        "msg": "用户名或密码错误"
+      })
     }
   })
 })
 
 //更新用户信息的路由
-router.post('/update',(req,res)=>{
+router.post('/update', (req, res) => {
   //从请求的cookie中得到userid
-  const {userId} = req.cookies;
+  const { userId } = req.cookies;
   const userInfo = req.body;
   //如果不存在cookie不存在
-  if(!userId){
-    res.send({code:1,msg:"请先登录"});
+  if (!userId) {
+    res.send({ code: 1, msg: "请先登录" });
     return;
   }
-  UserModel.findByIdAndUpdate(userId,userInfo,(err,oldUser)=>{
-    if(!err){
-      if(!oldUser){
+  UserModel.findByIdAndUpdate(userId, userInfo, (err, oldUser) => {
+    if (!err) {
+      if (!oldUser) {
         //如果没有找到user(可能cookie被篡改),通知浏览器删除cookie
         res.clearCookie("userId")
-      }else{
-        const {_id,username,type} = oldUser;
+      } else {
+        const { _id, username, type } = oldUser;
         //修改成功则返回返回新的user
         res.send({
-          code:0,
-          data:{_id,username,type,...userInfo}
+          code: 0,
+          data: { _id, username, type, ...userInfo }
         })
       }
     }
@@ -93,28 +93,72 @@ router.post('/update',(req,res)=>{
 })
 
 //自动登录的路由
-router.get("/autoLogin",(req,res)=>{
-  const {userId} = req.cookies;
-  UserModel.findOne({_id:userId},userFilter,(err,user)=>{
-    if(!err){
+router.get("/autoLogin", (req, res) => {
+  const { userId } = req.cookies;
+  UserModel.findOne({ _id: userId }, userFilter, (err, user) => {
+    if (!err) {
       res.send({
-        code:0,
-        data:user
+        code: 0,
+        data: user
       })
     }
   })
 })
 
 //获取用户列表
-router.get("/userList",(req,res)=>{
-  const {type} = req.query;
-  UserModel.find({type},(err,users)=>{
-    if(!err){
+router.get("/userList", (req, res) => {
+  const { type } = req.query;
+  UserModel.find({ type }, (err, users) => {
+    if (!err) {
       res.send({
-        code:0,
-        data:users
+        code: 0,
+        data: users
       })
     }
   })
 })
+
+//获取当前用户的聊天列表
+router.get("/msgList", (req, res) => {
+  const { userId } = req.cookies;
+  let users = {}
+  //获取所有用户
+  UserModel.find((err, usersArr) => {
+    if (!err) {
+      usersArr.forEach(user => {
+        users[user_id] = { username: user.username, header: user.header }
+      })
+    }
+  })
+
+  ChatModel.find({ $or: [{ from: userId }, { to: userId }] }, (err, chatMsgs) => {
+    if (!err) {
+      res.send({
+        code: 0,
+        data: {
+          users,
+          chatMsgs
+        }
+      })
+    }
+  })
+})
+
+//更新消息为已读
+router.post('/readmsg', (req, res) => {
+  const {from} = req.body;
+  const to = req.cookies.userId;
+
+  ChatModel.updateMany({from,to,read:false},{read:true},(err,res)=>{
+    if(!err){
+      res.send({
+        code:0,
+        data:res.nModified
+      })
+    }
+  })
+
+})
+
+
 module.exports = router;
