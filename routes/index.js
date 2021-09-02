@@ -126,12 +126,13 @@ router.get("/msgList", (req, res) => {
   UserModel.find((err, usersArr) => {
     if (!err) {
       usersArr.forEach(user => {
-        users[user_id] = { username: user.username, header: user.header }
+        users[user._id] = { username: user.username, header: user.header }
       })
     }
   })
 
   ChatModel.find({ $or: [{ from: userId }, { to: userId }] }, (err, chatMsgs) => {
+   // console.log(chatMsgs)
     if (!err) {
       res.send({
         code: 0,
