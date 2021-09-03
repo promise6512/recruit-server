@@ -11,12 +11,12 @@ module.exports = function(server){
       //准备消息对象
       //console.log(from,to,content)
       const chat_id = [from,to].sort().join('_');
-      const creat_time = Date.now();
+      const creat_time = Date.now() + '';
       //console.log(creat_time)
       new ChatModel({from,to,chat_id,content,creat_time:creat_time}).save((err,chatMsg)=>{
         if(!err){
           //向所有连接上的客户端发送消息
-          console.log(creat_time)
+          //console.log(creat_time)
           io.emit('receiveMsg',chatMsg)
         }
       })

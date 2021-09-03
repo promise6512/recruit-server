@@ -32,7 +32,7 @@ const chatSchema = mongoose.Schema({
   chat_id: {type: String, required: true}, // from和to组成的字符串
   content: {type: String, required: true}, // 内容
   read: {type:Boolean, default: false}, // 标识是否已读
-  create_time: {type: Number} // 创建时间
+  create_time: {type: String} // 创建时间
 })
 
 //根据模板结构创建集合

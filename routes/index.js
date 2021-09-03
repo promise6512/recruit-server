@@ -132,7 +132,7 @@ router.get("/msgList", (req, res) => {
   })
 
   ChatModel.find({ $or: [{ from: userId }, { to: userId }] }, (err, chatMsgs) => {
-   // console.log(chatMsgs)
+    // console.log(chatMsgs)
     if (!err) {
       res.send({
         code: 0,
@@ -147,14 +147,18 @@ router.get("/msgList", (req, res) => {
 
 //更新消息为已读
 router.post('/readmsg', (req, res) => {
-  const {from} = req.body;
+  const { from } = req.body;
   const to = req.cookies.userId;
+  //console.log(from,to)
+  ChatModel.updateMany({ from, to, read: false }, { read: true }, (err, result) => {
+    if (!err) {
 
-  ChatModel.updateMany({from,to,read:false},{read:true},(err,res)=>{
-    if(!err){
       res.send({
-        code:0,
-        data:res.nModified
+        code: 0,
+        data: { 
+          nModified: result.nModified,
+          from
+        }
       })
     }
   })
